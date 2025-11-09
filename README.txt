@@ -1,0 +1,1 @@
+This repo is only for education purporses! And also. Skidders, i see you! >:(
