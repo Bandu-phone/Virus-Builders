@@ -1,0 +1,4 @@
+[CustomCombo1]
+STRECH XOR COLORED Shader|0
+HLS COLOR Shader|0
+[/]
